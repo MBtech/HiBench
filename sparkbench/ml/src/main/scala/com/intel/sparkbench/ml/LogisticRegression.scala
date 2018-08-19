@@ -23,6 +23,8 @@ import org.apache.spark.{SparkConf, SparkContext}
 import org.apache.spark.mllib.classification.LogisticRegressionWithLBFGS
 import org.apache.spark.mllib.regression.LabeledPoint
 import org.apache.spark.rdd.RDD
+import com.intel.hibench.sparkbench.common.IOCommon
+import org.apache.spark.sql.SparkSession
 
 object LogisticRegression {
 
@@ -33,9 +35,11 @@ object LogisticRegression {
       inputPath = args(0)
     }
 
-    val conf = new SparkConf()
-	.setAppName("LogisticRegressionWithLBFGS")
-    val sc = new SparkContext(conf)
+    val conf = new SparkConf().setAppName("LogisticRegressionWithLBFGS").set("spark.cassandra.connection.host", IOCommon.getProperty("hibench.cassandra.host").fold("")(_.toString))
+
+    val spark = SparkSession.builder().config(conf).getOrCreate()
+    import spark.implicits._
+    val sc = spark.sparkContext
 
     // $example on$
     // Load training data in LIBSVM format.
@@ -59,6 +63,13 @@ object LogisticRegression {
 
     val accuracy = predictionAndLabels.filter(x => x._1 == x._2).count().toDouble / predictionAndLabels.count()
     println(s"Accuracy = $accuracy")
+
+    val p = predictionAndLabels.zipWithIndex().map{point => (point._1._1, point._1._2, point._2)}
+    p.take(10).foreach(println)
+    val preds = p.toDF("prediction","label" ,"id")
+    preds.take(10).foreach(println)
+    preds.write.format("org.apache.spark.sql.cassandra").options(Map("table"->"lr", "keyspace"->"test")).save()
+
 
     sc.stop()
   }
