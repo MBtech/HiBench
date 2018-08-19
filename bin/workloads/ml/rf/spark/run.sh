@@ -32,6 +32,10 @@ OPTION="--numTrees $NUM_TREES_RF \
         --impurity $IMPURITY_RF \
         --maxDepth $MAX_DEPTH_RF \
         --maxBins $MAX_BINS_RF"
+ssh -t ubuntu@$CASSANDRA_IP "cqlsh $CASSANDRA_IP -e \"DROP TABLE IF EXISTS test.rf;\""
+ssh -t ubuntu@$CASSANDRA_IP "cqlsh $CASSANDRA_IP -e \"CREATE KEYSPACE IF NOT EXISTS test WITH REPLICATION = {'class' : 'SimpleStrategy','replication_factor' : 1};\""
+ssh -t ubuntu@$CASSANDRA_IP "cqlsh $CASSANDRA_IP -e \"CREATE TABLE IF NOT EXISTS test.rf (label float, prediction float, id bigint, PRIMARY KEY (id) );\""
+
 run_spark_job com.intel.hibench.sparkbench.ml.RandomForestClassification $OPTION $INPUT_HDFS
 END_TIME=`timestamp`
 

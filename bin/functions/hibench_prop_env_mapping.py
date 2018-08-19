@@ -40,6 +40,7 @@ HiBenchEnvPropMappingMandatory=dict(
 
     MASTERS="hibench.masters.hostnames",
     SLAVES="hibench.slaves.hostnames",
+    CASSANDRA_IP="hibench.cassandra.host",
     )
 
 HiBenchEnvPropMapping=dict(
