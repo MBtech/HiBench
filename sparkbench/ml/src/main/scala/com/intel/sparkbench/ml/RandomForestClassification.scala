@@ -71,7 +71,7 @@ object RandomForestClassification {
   }
 
   def run(params: Params): Unit = {
-    val conf = new SparkConf().setAppName("Spark SQL basic example").set("spark.cassandra.connection.host", IOCommon.getProperty("hibench.cassandra.host").fold("")(_.toString))
+    val conf = new SparkConf().setAppName(s"RFC with $params").set("spark.cassandra.connection.host", IOCommon.getProperty("hibench.cassandra.host").fold("")(_.toString))
 
     //val conf = new SparkConf().setAppName(s"RFC with $params")
     val spark = SparkSession.builder().config(conf).getOrCreate()

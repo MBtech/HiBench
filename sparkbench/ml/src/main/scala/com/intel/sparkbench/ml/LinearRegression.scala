@@ -17,13 +17,14 @@
 
 package com.intel.hibench.sparkbench.ml
 
+import com.intel.hibench.sparkbench.common.IOCommon
 import org.apache.spark.{SparkConf, SparkContext}
 import org.apache.spark.mllib.linalg.Vectors
 import org.apache.spark.mllib.regression.LabeledPoint
 import org.apache.spark.mllib.regression.LinearRegressionModel
 import org.apache.spark.mllib.regression.LinearRegressionWithSGD
 import org.apache.spark.rdd.RDD
-
+import org.apache.spark.sql.SparkSession
 import scopt.OptionParser
 
 object LinearRegression {
@@ -57,8 +58,11 @@ object LinearRegression {
   }
    
   def run(params: Params): Unit = {
-    val conf = new SparkConf().setAppName(s"LinearRegressionWithSGD with $params")
-    val sc = new SparkContext(conf)
+    val conf = new SparkConf().setAppName(s"LinearRegressionWithSGD with $params").set("spark.cassandra.connection.host", IOCommon.getProperty("hibench.cassandra.host").fold("")(_.toString))
+    //val conf = new SparkConf().setAppName(s"LinearRegressionWithSGD with $params")
+    val spark = SparkSession.builder().config(conf).getOrCreate()
+    import spark.implicits._
+    val sc = spark.sparkContext
     
     val dataPath = params.dataPath
     val numIterations = params.numIterations
@@ -77,6 +81,15 @@ object LinearRegression {
     }
     val MSE = valuesAndPreds.map{ case(v, p) => math.pow((v - p), 2) }.mean()
     println("Training Mean Squared Error = " + MSE)
+
+    valuesAndPreds.take(10).foreach(println)
+
+    val p = valuesAndPreds.zipWithIndex().map{point => (point._1._1, point._1._2, point._2)}
+    p.take(10).foreach(println)
+    val preds = p.toDF("label", "prediction", "id")
+    preds.take(10).foreach(println)
+    preds.write.format("org.apache.spark.sql.cassandra").options(Map("table"->"linear", "keyspace"->"test")).save()
+
 
     sc.stop()
   }
