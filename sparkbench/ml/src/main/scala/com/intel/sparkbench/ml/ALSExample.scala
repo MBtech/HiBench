@@ -81,8 +81,8 @@ object ALSExample {
       arg[String]("<dataPath>")
         .required()
         .text("Input paths to a User-Product dataset of ratings")
-        .action((x, c) => c.copy(dataPath = x))	
-    }  
+        .action((x, c) => c.copy(dataPath = x))
+    }
     parser.parse(args, defaultParams) match {
       case Some(params) => run(params)
       case _ => sys.exit(1)
@@ -125,7 +125,7 @@ object ALSExample {
     val rmse = computeRmse(model, testData, params.implicitPrefs)
 
     println(s"Test RMSE = $rmse.")
-    
+
     // Recommend products for all users, enable the following code to test recommendForAll
     /*
     val userRecommend = model.recommendProductsForUsers(numRecommends)

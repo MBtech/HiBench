@@ -23,6 +23,9 @@ import org.apache.spark.mllib.clustering.{LDA, DistributedLDAModel, LocalLDAMode
 import org.apache.spark.mllib.linalg.{Vector, Vectors}
 import org.apache.spark.rdd.RDD
 import scopt.OptionParser
+import com.intel.hibench.sparkbench.common.IOCommon
+import org.apache.spark.sql.SparkSession
+
 object LDAExample {
   case class Params(
       inputPath: String = null,
@@ -31,10 +34,10 @@ object LDAExample {
       maxIterations: Int = 10,
       optimizer: String = "online",
       maxResultSize: String = "1g")
-	  
+
   def main(args: Array[String]): Unit = {
     val defaultParams = Params()
-	
+
     val parser = new OptionParser[Params]("LDA") {
 	  head("LDA: an example app for LDA.")
 	  opt[String]("optimizer")
@@ -56,7 +59,7 @@ object LDAExample {
       arg[String]("<outputPath>")
         .required()
         .text("outputPath paths")
-        .action((x, c) => c.copy(outputPath = x))		
+        .action((x, c) => c.copy(outputPath = x))
 
     }
 	parser.parse(args, defaultParams) match {
@@ -64,15 +67,18 @@ object LDAExample {
       case _ => sys.exit(1)
     }
   }
-  
+
   def run(params: Params): Unit = {
-    val conf = new SparkConf()
-        .setAppName(s"LDA Example with $params")
-        .set("spark.driver.maxResultSize", params.maxResultSize)
-    val sc = new SparkContext(conf)
+    val conf = new SparkConf().setAppName(s"LDA Example with $params")
+      .set("spark.cassandra.connection.host", IOCommon.getProperty("hibench.cassandra.host").fold("")(_.toString))
+      .set("spark.driver.maxResultSize", params.maxResultSize)
+
+    val spark = SparkSession.builder().config(conf).getOrCreate()
+    import spark.implicits._
+    val sc = spark.sparkContext
 
     val corpus: RDD[(Long, Vector)] = sc.objectFile(params.inputPath)
-    
+
     // Cluster the documents into numTopics topics using LDA
     val ldaModel = new LDA().setK(params.numTopics).setMaxIterations(params.maxIterations).setOptimizer(params.optimizer).run(corpus)
 

@@ -70,7 +70,6 @@ object LogisticRegression {
     preds.take(10).foreach(println)
     preds.write.format("org.apache.spark.sql.cassandra").options(Map("table"->"lr", "keyspace"->"test")).save()
 
-
     sc.stop()
   }
 }

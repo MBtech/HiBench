@@ -23,7 +23,8 @@ import org.apache.spark.mllib.tree.configuration.BoostingStrategy
 import org.apache.spark.mllib.tree.model.GradientBoostedTreesModel
 import org.apache.spark.rdd.RDD
 import org.apache.spark.mllib.regression.LabeledPoint
-
+import com.intel.hibench.sparkbench.common.IOCommon
+import org.apache.spark.sql.SparkSession
 import scopt.OptionParser
 
 object GradientBoostedTree {
@@ -69,8 +70,11 @@ object GradientBoostedTree {
   }
 
   def run(params: Params): Unit = {
-    val conf = new SparkConf().setAppName(s"Gradient Boosted Tree with $params")
-    val sc = new SparkContext(conf)
+    val conf = new SparkConf().setAppName(s"Gradient Boosted Tree with $params").set("spark.cassandra.connection.host", IOCommon.getProperty("hibench.cassandra.host").fold("")(_.toString))
+
+    val spark = SparkSession.builder().config(conf).getOrCreate()
+    import spark.implicits._
+    val sc = spark.sparkContext
 
     val dataPath = params.dataPath
     val numClasses = params.numClasses
@@ -105,6 +109,12 @@ object GradientBoostedTree {
     }
     val testErr = labelAndPreds.filter(r => r._1 != r._2).count.toDouble / testData.count()
     println("Test Error = " + testErr)
+
+    val p = labelAndPreds.zipWithIndex().map{point => (point._1._1, point._1._2, point._2)}
+    p.take(10).foreach(println)
+    val preds = p.toDF("label", "prediction","id")
+    preds.take(10).foreach(println)
+    preds.write.format("org.apache.spark.sql.cassandra").options(Map("table"->"gbt", "keyspace"->"test")).save()
 
     sc.stop()
   }

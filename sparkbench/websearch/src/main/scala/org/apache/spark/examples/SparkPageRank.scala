@@ -27,7 +27,7 @@ package org.apache.spark.examples
 import com.intel.hibench.sparkbench.common.IOCommon
 import org.apache.spark.SparkContext._
 import org.apache.spark.{SparkConf, SparkContext}
-
+import org.apache.spark.sql.SparkSession
 /**
  * Computes the PageRank of URLs from an input file. Input file should
  * be in format of:
@@ -43,11 +43,18 @@ object SparkPageRank {
       System.err.println("Usage: SparkPageRank <input_file> <output_filename> [<iter>]")
       System.exit(1)
     }
-    val sparkConf = new SparkConf().setAppName("ScalaPageRank")
+
+    val conf = new SparkConf().setAppName("ScalaPageRank")
+      .set("spark.cassandra.connection.host", IOCommon.getProperty("hibench.cassandra.host").fold("")(_.toString))
+
+    val spark = SparkSession.builder().config(conf).getOrCreate()
+    import spark.implicits._
+    val ctx = spark.sparkContext
+
     val input_path = args(0)
     val output_path = args(1)
     val iters = if (args.length > 2) args(2).toInt else 10
-    val ctx = new SparkContext(sparkConf)
+
 
 //  Modified by Lv: accept last two values from HiBench generated PageRank data format
     val lines = ctx.textFile(input_path, 1)
@@ -71,6 +78,10 @@ object SparkPageRank {
     val io = new IOCommon(ctx)
     io.save(output_path, ranks)
 //    ranks.saveAsTextFile(output_path)
+
+    val rankDF = ranks.toDF("url","rank")
+    rankDF.take(10).foreach(println)
+    rankDF.write.format("org.apache.spark.sql.cassandra").options(Map("table"->"pagerank", "keyspace"->"test")).save()
 
     ctx.stop()
   }

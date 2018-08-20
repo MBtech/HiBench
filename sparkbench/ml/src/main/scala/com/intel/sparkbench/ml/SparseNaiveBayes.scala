@@ -31,6 +31,9 @@ import org.apache.spark.mllib.classification.NaiveBayes
 import org.apache.hadoop.io.Text
 import org.apache.spark.SparkContext._
 
+import com.intel.hibench.sparkbench.common.IOCommon
+import org.apache.spark.sql.SparkSession
+
 /**
  * An example naive Bayes app. Run with
  * {{{
@@ -75,7 +78,11 @@ object SparseNaiveBayes {
 
   def run(params: Params) {
     val conf = new SparkConf().setAppName(s"SparseNaiveBayes with $params")
-    val sc = new SparkContext(conf)
+      .set("spark.cassandra.connection.host", IOCommon.getProperty("hibench.cassandra.host").fold("")(_.toString))
+
+    val spark = SparkSession.builder().config(conf).getOrCreate()
+    import spark.implicits._
+    val sc = spark.sparkContext
 
 //    Logger.getRootLogger.setLevel(Level.WARN)
 
@@ -137,6 +144,12 @@ object SparseNaiveBayes {
     val accuracy = predictionAndLabel.filter(x => x._1 == x._2).count().toDouble / numTest
 
     println(s"Test accuracy = $accuracy.")
+
+    val p = predictionAndLabel.zipWithIndex().map{point => (point._1._1, point._1._2, point._2)}
+    p.take(10).foreach(println)
+    val preds = p.toDF("prediction","label" ,"id")
+    preds.take(10).foreach(println)
+    preds.write.format("org.apache.spark.sql.cassandra").options(Map("table"->"bayes", "keyspace"->"test")).save()
 
     sc.stop()
   }

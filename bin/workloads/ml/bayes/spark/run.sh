@@ -26,6 +26,10 @@ rmr_hdfs $OUTPUT_HDFS || true
 
 SIZE=`dir_size $INPUT_HDFS`
 START_TIME=`timestamp`
+ssh -t ubuntu@$CASSANDRA_IP "cqlsh $CASSANDRA_IP -e \"DROP TABLE IF EXISTS test.bayes;\""
+ssh -t ubuntu@$CASSANDRA_IP "cqlsh $CASSANDRA_IP -e \"CREATE KEYSPACE IF NOT EXISTS test WITH REPLICATION = {'class' : 'SimpleStrategy','replication_factor' : 1};\""
+ssh -t ubuntu@$CASSANDRA_IP "cqlsh $CASSANDRA_IP -e \"CREATE TABLE IF NOT EXISTS test.bayes (prediction float, label float, id bigint, PRIMARY KEY (id) );\""
+
 run_spark_job org.apache.spark.examples.mllib.SparseNaiveBayes ${INPUT_HDFS}
 END_TIME=`timestamp`
 
@@ -37,4 +41,3 @@ leave_bench
 # run bench
 #run_spark_job org.apache.spark.examples.mllib.SparseNaiveBayes --numFeatures ${NUM_FEATURES} ${INPUT_HDFS}/vectors.txt || exit 1
 #$SPARK_HOME/bin/spark-submit --class org.apache.spark.examples.mllib.SparseNaiveBayes --master ${SPARK_MASTER} ${SPARK_EXAMPLES_JAR} --numFeatures ${NUM_FEATURES} ${INPUT_HDFS}/vectors.txt
-
