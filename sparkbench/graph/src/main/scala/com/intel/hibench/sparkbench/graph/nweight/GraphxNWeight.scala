@@ -18,13 +18,15 @@
 package com.intel.hibench.sparkbench.graph.nweight
 
 import scala.collection.JavaConversions._
-import org.apache.spark.SparkContext
 import org.apache.spark.rdd.RDD
 import org.apache.spark.HashPartitioner
 import org.apache.spark.storage.StorageLevel
 import org.apache.spark.graphx._
 import org.apache.spark.graphx.impl.GraphImpl
 import it.unimi.dsi.fastutil.longs.Long2DoubleOpenHashMap
+import com.intel.hibench.sparkbench.common.IOCommon
+import org.apache.spark.sql.SparkSession
+import org.apache.spark.{SparkContext, SparkConf}
 
 /** * Compute NWeight for Graph G(V, E) as defined below *     Weight(1)(u, v) = edge(u, v)
  *     Weight(n)(u, v) = Sum (over {x|there are edges (u, x) and (x, v)}) Weight(n-1)(u, x)*Weight(1)(x, v)
@@ -66,8 +68,14 @@ object GraphxNWeight extends Serializable{
     vdata
   }
 
-  def nweight(sc: SparkContext, input: String, output: String, step: Int,
+  def nweight(conf: SparkConf, input: String, output: String, step: Int,
     maxDegree: Int, numPartitions: Int, storageLevel: StorageLevel) {
+    
+    conf.setAppName("NWeightGraphX")
+
+    val spark = SparkSession.builder().config(conf).getOrCreate()
+    import spark.implicits._
+    val sc = spark.sparkContext
 
     //val start1 = System.currentTimeMillis
     val part = new HashPartitioner(numPartitions)
@@ -98,6 +106,7 @@ object GraphxNWeight extends Serializable{
       g = g.outerJoinVertices(msg)(updateF).persist(storageLevel)
     }
 
+    /*
     g.vertices.map { case (vid, vdata) => 
       var s = new StringBuilder
       s.append(vid)
@@ -110,5 +119,25 @@ object GraphxNWeight extends Serializable{
       }
       s.toString
     }.saveAsTextFile(output)
+    */
+
+    val tuple = g.vertices.map { case (vid, vdata) =>
+      var s = new StringBuilder
+      s.append(vid)
+
+      vdata.foreach { r =>
+        s.append(' ')
+        s.append(r._1)
+        s.append(':')
+        s.append(r._2)
+      }
+      (vid.toLong, s.toString)
+    }
+  
+    val values = tuple.toDF("vid","value")
+    values.take(10).foreach(println)
+    values.write.format("org.apache.spark.sql.cassandra").options(Map("table"->"nweight", "keyspace"->"test")).save()
+    sc.stop()
+    
   }
 }
