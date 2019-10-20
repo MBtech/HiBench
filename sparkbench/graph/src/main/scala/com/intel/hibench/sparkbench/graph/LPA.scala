@@ -1,9 +1,12 @@
 package com.intel.hibench.sparkbench.graph
 import org.apache.spark._
 import org.apache.spark.graphx._
+import org.apache.spark.graphx.lib._
 import org.apache.spark.storage.StorageLevel
 import org.apache.log4j.{Level, Logger}
 import scala.io.Source
+import java.time.LocalDateTime
+import java.time.format.DateTimeFormatter
 import org.apache.spark.sql.SparkSession
 
 // Label Propagation Algorithm
@@ -12,8 +15,10 @@ object LPA {
     // Start Spark.
     println("\n### Starting Spark\n")
     val sparkConf = new SparkConf().setAppName("Label Propagation")
+    val spark = SparkSession.builder().config(sparkConf).getOrCreate()
     import spark.implicits._
-    implicit val sc = new SparkContext(sparkConf)
+
+    val sc = spark.sparkContext
 
     // Suppress unnecessary logging.
     Logger.getRootLogger.setLevel(Level.ERROR)
