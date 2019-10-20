@@ -19,6 +19,8 @@ package com.intel.hibench.sparkbench.graph.nweight
 
 import org.apache.spark.{SparkContext, SparkConf}
 import org.apache.spark.storage.StorageLevel
+import com.intel.hibench.sparkbench.common.IOCommon
+import org.apache.spark.sql.SparkSession
 
 /**
  * Compute NWeight for Graph G(V, E) as defined below.
@@ -71,19 +73,14 @@ object NWeight extends Serializable{
     if(!disableKryo) {
       System.setProperty("spark.serializer", "org.apache.spark.serializer.KryoSerializer")
     }
-    val sparkConf = new SparkConf()
-    if (model.toLowerCase == "graphx") 
-      sparkConf.setAppName("NWeightGraphX")
-    else
-      sparkConf.setAppName("NWeightPregel")
-    val sc = new SparkContext(sparkConf)
+    
+    val conf = new SparkConf().set("spark.cassandra.connection.host", IOCommon.getProperty("hibench.cassandra.host").fold("")(_.toString))
 
     if (model.toLowerCase == "graphx") {
-      GraphxNWeight.nweight(sc, input, output, step, maxDegree, numPartitions, storageLevel)
+      GraphxNWeight.nweight(conf, input, output, step, maxDegree, numPartitions, storageLevel)
     } else {
-      PregelNWeight.nweight(sc, input, output, step, maxDegree, numPartitions, storageLevel)
+      PregelNWeight.nweight(conf, input, output, step, maxDegree, numPartitions, storageLevel)
     }
 
-    sc.stop()
   }
 }

@@ -75,11 +75,11 @@ object SparkPageRank {
 
 //    val output = ranks.collect()
 //    output.foreach(tup => println(tup._1 + " has rank: " + tup._2 + "."))
-    val io = new IOCommon(ctx)
-    io.save(output_path, ranks)
+//    val io = new IOCommon(ctx)
+//    io.save(output_path, ranks)
 //    ranks.saveAsTextFile(output_path)
 
-    val rankDF = ranks.toDF("url","rank")
+    val rankDF = ranks.toDF("id","rank")
     rankDF.take(10).foreach(println)
     rankDF.write.format("org.apache.spark.sql.cassandra").options(Map("table"->"pagerank", "keyspace"->"test")).save()
 
