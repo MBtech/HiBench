@@ -8,13 +8,14 @@ import scala.io.Source
 import java.time.LocalDateTime
 import java.time.format.DateTimeFormatter
 import org.apache.spark.sql.SparkSession
+import com.intel.hibench.sparkbench.common.IOCommon
 
 // Label Propagation Algorithm
 object LPA {
   def main(args: Array[String]) {
     // Start Spark.
     println("\n### Starting Spark\n")
-    val sparkConf = new SparkConf().setAppName("Label Propagation")
+    val sparkConf = new SparkConf().setAppName("Label Propagation").set("spark.cassandra.connection.host", IOCommon.getProperty("hibench.cassandra.host").fold("")(_.toString))
     val spark = SparkSession.builder().config(sparkConf).getOrCreate()
     import spark.implicits._
 
@@ -43,7 +44,7 @@ object LPA {
     val lgraph = LabelPropagation.run(gp, 10)
     val labels = lgraph.vertices
 
-    val labelsDF = labels.toDF("vertexID","Label")
+    val labelsDF = labels.toDF("vid","value")
     labelsDF.take(10).foreach(println)
     labelsDF.write.format("org.apache.spark.sql.cassandra").options(Map("table"->"lpa", "keyspace"->"test")).save()
     // Stop Spark.

@@ -24,6 +24,7 @@ import org.apache.spark.HashPartitioner
 import org.apache.spark.{SparkConf, SparkContext}
 import org.apache.spark.mllib.recommendation.{MatrixFactorizationModel, Rating}
 import org.apache.spark.rdd.RDD
+import org.apache.spark.graphx.util.GraphGenerators
 
 import scala.collection.mutable.ArrayBuffer
 import scala.util.Random
@@ -38,7 +39,7 @@ object GraphDataGenerator {
 
     var modelPath = ""
     var outputPath = ""
-    var totalNumRecords: Long = 0
+    var totalNumRecords: Int = 0
     val parallel = sc.getConf.getInt("spark.default.parallelism", sc.defaultParallelism)
     val numPartitions = IOCommon.getProperty("hibench.default.shuffle.parallelism")
       .getOrElse((parallel / 2).toString).toInt
@@ -46,7 +47,7 @@ object GraphDataGenerator {
     if (args.length == 3) {
       modelPath = args(0)
       outputPath = args(1)
-      totalNumRecords = args(2).toLong
+      totalNumRecords = args(2).toInt
 
       println(s"Model Path: $modelPath")
       println(s"Output Path: $outputPath")
@@ -58,79 +59,12 @@ object GraphDataGenerator {
       System.exit(1)
     }
 
-    val model: MatrixFactorizationModel = loadModel(modelPath, sc, numPartitions)
+    val g = GraphGenerators.logNormalGraph(sc, totalNumRecords)
 
-    var randomPairCount: Long = 0
-    var randomPair: RDD[(Int, Int)] = null
-    while (randomPairCount < totalNumRecords) {
-      val numRecords = ((totalNumRecords - randomPairCount) * 1.2).toLong
-      val numPerPartition = numRecords / numPartitions
-
-      val seedRDD = sc.parallelize(1 to numPartitions, numPartitions)
-
-      val randomPairOneTurn = seedRDD.flatMap { r =>
-        val randNumbers = new ArrayBuffer[(Int, Int)]
-
-        while (randNumbers.size < numPerPartition) {
-          val id1 = Random.nextInt(MAX_ID)
-          val id2 = Random.nextInt(MAX_ID)
-
-          if (id1 != id2) {
-            randNumbers += ((id1, id2))
-          }
-        }
-        randNumbers
-      }.distinct()
-
-      if (randomPair == null) {
-        randomPair = randomPairOneTurn
-      } else {
-        randomPair = randomPair.union(randomPairOneTurn)
-      }
-      randomPairCount = randomPair.count()
-    }
-
-    randomPair = randomPair.zipWithIndex()
-      .filter(_._2 < totalNumRecords)
-      .map(_._1)
-      .sortBy(x => x)
-
-    val predictRatings = model.predict(randomPair)
-
-    val resultData = predictRatings.flatMap {
-      case Rating(id1, id2, weight) =>
-        Seq((id1, (id2, weight)), (id2, (id1, weight)))
-    }.groupByKey().map { case (id1, iter) =>
-      s"$id1\t" +
-        iter.map { case (id, w) => f"$id" }.mkString(",")
-    }
-
-    resultData.saveAsTextFile(outputPath)
+    val edges = g.edges.map(edge => edge.dstId + " " + edge.srcId)
+    edges.saveAsTextFile(outputPath)
 
     sc.stop()
   }
 
-  def loadModel(modelPath: String, sc: SparkContext, partitions: Int): MatrixFactorizationModel = {
-    val modelFile = new File(modelPath)
-
-    if (modelFile.exists) {
-      val in = new DataInputStream(new FileInputStream(modelPath))
-      val weights = new Array[(Int, Double)](MAX_ID)
-      for (i <- weights.indices) {
-        val w = in.readFloat()
-        weights(i) = (i, w)
-      }
-      in.close()
-
-      val userFeatures = sc.parallelize(weights, math.max(400, partitions)).map { case (i, w) =>
-        (i, Array(w))
-      }
-      val userFeaturesPartitioned = userFeatures.partitionBy(new HashPartitioner(partitions))
-      userFeaturesPartitioned.cache()
-      // Model matrix is symmetric, so productFeatures is the same with userFeatures
-      new MatrixFactorizationModel(1, userFeaturesPartitioned, userFeaturesPartitioned)
-    } else {
-      throw new FileNotFoundException("No model file found in path: " + modelPath)
-    }
-  }
 }

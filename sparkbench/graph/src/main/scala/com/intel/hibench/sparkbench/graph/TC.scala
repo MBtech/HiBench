@@ -7,13 +7,14 @@ import scala.io.Source
 import java.time.LocalDateTime
 import java.time.format.DateTimeFormatter
 import org.apache.spark.sql.SparkSession
+import com.intel.hibench.sparkbench.common.IOCommon
 
 // Triangle Counting
 object TC {
   def main(args: Array[String]) {
     // Start Spark.
     println("\n### Starting Spark\n")
-    val sparkConf = new SparkConf().setAppName("Triangle Counting")
+    val sparkConf = new SparkConf().setAppName("Triangle Counting").set("spark.cassandra.connection.host", IOCommon.getProperty("hibench.cassandra.host").fold("")(_.toString))
     val spark = SparkSession.builder().config(sparkConf).getOrCreate()
     import spark.implicits._
 
@@ -42,7 +43,7 @@ object TC {
     val triCounts = gp.triangleCount().vertices
 
 
-    val triCountsDF = triCounts.toDF("vertexID","TriangleCount")
+    val triCountsDF = triCounts.toDF("vid","value")
     triCountsDF.take(10).foreach(println)
     triCountsDF.write.format("org.apache.spark.sql.cassandra").options(Map("table"->"tc", "keyspace"->"test")).save()
     // Stop Spark.

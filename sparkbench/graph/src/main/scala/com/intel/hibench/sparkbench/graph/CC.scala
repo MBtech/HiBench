@@ -8,13 +8,14 @@ import scala.io.Source
 import java.time.LocalDateTime
 import java.time.format.DateTimeFormatter
 import org.apache.spark.sql.SparkSession
+import com.intel.hibench.sparkbench.common.IOCommon
 
 // Connected Components
 object CC {
   def main(args: Array[String]) {
     // Start Spark.
     println("\n### Starting Spark\n")
-    val sparkConf = new SparkConf().setAppName("Connected Components")
+    val sparkConf = new SparkConf().setAppName("Connected Components").set("spark.cassandra.connection.host", IOCommon.getProperty("hibench.cassandra.host").fold("")(_.toString))
     val spark = SparkSession.builder().config(sparkConf).getOrCreate()
     import spark.implicits._
 
@@ -44,7 +45,7 @@ object CC {
 
     // cc.take(10).foreach(println)
 
-    val ccDF = cc.toDF("vertexID","componentID")
+    val ccDF = cc.toDF("vid","value")
     ccDF.take(10).foreach(println)
     ccDF.write.format("org.apache.spark.sql.cassandra").options(Map("table"->"cc", "keyspace"->"test")).save()
     // Stop Spark.
