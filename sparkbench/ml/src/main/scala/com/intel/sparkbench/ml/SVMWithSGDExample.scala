@@ -91,9 +91,9 @@ object SVMWithSGDExample {
       val score = model.predict(point.features)
       (point.label,score)
     }
-    info.take(10).foreach(println)
-    val infoDF = info.toDF("vid", "value")
-    infoDF.write.format("org.apache.spark.sql.cassandra").options(Map("table"->"svm", "keyspace"->"test")).save()
+    scoreAndLabels.take(10).foreach(println)
+    val scoreAndLabelsDF = scoreAndLabels.toDF("vid", "value")
+    scoreAndLabelsDF.write.format("org.apache.spark.sql.cassandra").options(Map("table"->"svm", "keyspace"->"test")).save()
 
     // Get evaluation metrics.
     val metrics = new BinaryClassificationMetrics(scoreAndLabels)
