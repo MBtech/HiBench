@@ -24,6 +24,9 @@ import org.apache.spark.mllib.clustering.KMeans
 import org.apache.spark.mllib.linalg.Vectors
 import org.apache.spark.{SparkConf, SparkContext}
 import scopt.OptionParser
+import org.apache.spark.sql.SparkSession
+import com.intel.hibench.sparkbench.common.IOCommon
+
 
 /**
  *
@@ -78,8 +81,11 @@ object DenseKMeans {
   }
 
   def run(params: Params) {
-    val conf = new SparkConf().setAppName(s"DenseKMeans with $params")
-    val sc = new SparkContext(conf)
+    val conf = new SparkConf().setAppName(s"DenseKMeans with $params").set("spark.cassandra.connection.host", IOCommon.getProperty("hibench.cassandra.host").fold("")(_.toString))
+    val spark = SparkSession.builder().config(conf).getOrCreate()
+    import spark.implicits._
+
+    val sc = spark.sparkContext
 
 //    Logger.getRootLogger.setLevel(Level.WARN)
 
@@ -109,6 +115,14 @@ object DenseKMeans {
       .setK(params.k)
       .setMaxIterations(params.numIterations)
       .run(examples)
+ 
+    //val predictions = examples.map(point => point, model.predict(point))
+    val predictions = model.predict(examples)
+    
+    val info = examples.zip(predictions).map{case (point,pred) => (point.toString, pred)}
+    info.take(10).foreach(println)
+    val infoDF = info.toDF("vid", "value")
+    infoDF.write.format("org.apache.spark.sql.cassandra").options(Map("table"->"kmeans", "keyspace"->"test")).save()
 
     val cost = model.computeCost(examples)
 

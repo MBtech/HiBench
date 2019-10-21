@@ -28,6 +28,10 @@ rmr_hdfs $OUTPUT_HDFS || true
 SIZE=`dir_size $INPUT_HDFS`
 START_TIME=`timestamp`
 
+ssh -t ubuntu@$CASSANDRA_IP "cqlsh $CASSANDRA_IP -e \"DROP TABLE IF EXISTS test.kmeans;\""
+ssh -t ubuntu@$CASSANDRA_IP "cqlsh $CASSANDRA_IP -e \"CREATE KEYSPACE IF NOT EXISTS test WITH REPLICATION = {'class' : 'SimpleStrategy','replication_factor' : 1};\""
+ssh -t ubuntu@$CASSANDRA_IP "cqlsh $CASSANDRA_IP -e \"CREATE TABLE IF NOT EXISTS test.kmeans (vid varchar, value bigint ,PRIMARY KEY (vid) );\""
+
 run_spark_job com.intel.hibench.sparkbench.ml.DenseKMeans -k $K --numIterations $MAX_ITERATION $INPUT_HDFS/samples
 END_TIME=`timestamp`
 
