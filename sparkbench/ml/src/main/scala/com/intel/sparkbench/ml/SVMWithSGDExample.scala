@@ -22,7 +22,8 @@ import org.apache.spark.mllib.classification.{SVMModel, SVMWithSGD}
 import org.apache.spark.mllib.evaluation.BinaryClassificationMetrics
 import org.apache.spark.rdd.RDD
 import org.apache.spark.mllib.regression.LabeledPoint
-
+import org.apache.spark.sql.SparkSession
+import com.intel.hibench.sparkbench.common.IOCommon
 import scopt.OptionParser
 
 object SVMWithSGDExample {
@@ -51,7 +52,7 @@ object SVMWithSGDExample {
       arg[String]("<dataPath>")
         .required()
         .text("data path of SVM")
-        .action((x, c) => c.copy(dataPath = x)) 
+        .action((x, c) => c.copy(dataPath = x))
     }
     parser.parse(args, defaultParams) match {
       case Some(params) => run(params)
@@ -61,8 +62,11 @@ object SVMWithSGDExample {
 
   def run(params: Params): Unit = {
 
-    val conf = new SparkConf().setAppName(s"SVM with $params")
-    val sc = new SparkContext(conf)
+    val conf = new SparkConf().setAppName(s"SVM with $params").set("spark.cassandra.connection.host", IOCommon.getProperty("hibench.cassandra.host").fold("")(_.toString))
+    val spark = SparkSession.builder().config(conf).getOrCreate()
+    import spark.implicits._
+
+    val sc = spark.sparkContext
 
     val dataPath = params.dataPath
     val numIterations = params.numIterations
@@ -85,8 +89,11 @@ object SVMWithSGDExample {
     // Compute raw scores on the test set.
     val scoreAndLabels = test.map { point =>
       val score = model.predict(point.features)
-      (score, point.label)
+      (point.label,score)
     }
+    info.take(10).foreach(println)
+    val infoDF = info.toDF("vid", "value")
+    infoDF.write.format("org.apache.spark.sql.cassandra").options(Map("table"->"svm", "keyspace"->"test")).save()
 
     // Get evaluation metrics.
     val metrics = new BinaryClassificationMetrics(scoreAndLabels)
