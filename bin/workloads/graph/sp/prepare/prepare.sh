@@ -17,10 +17,10 @@
 current_dir=`dirname "$0"`
 current_dir=`cd "$current_dir"; pwd`
 root_dir=${current_dir}/../../../../../
-workload_config=${root_dir}/conf/workloads/graph/tc.conf
+workload_config=${root_dir}/conf/workloads/graph/sp.conf
 . "${root_dir}/bin/functions/load_bench_config.sh"
 
-enter_bench TCPrepare ${workload_config} ${current_dir}
+enter_bench SPPrepare ${workload_config} ${current_dir}
 show_bannar start
 
 rmr_hdfs $INPUT_HDFS || true

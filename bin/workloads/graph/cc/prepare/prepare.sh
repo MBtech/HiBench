@@ -20,7 +20,7 @@ root_dir=${current_dir}/../../../../../
 workload_config=${root_dir}/conf/workloads/graph/cc.conf
 . "${root_dir}/bin/functions/load_bench_config.sh"
 
-enter_bench NWeightPrepare ${workload_config} ${current_dir}
+enter_bench CCPrepare ${workload_config} ${current_dir}
 show_bannar start
 
 rmr_hdfs $INPUT_HDFS || true

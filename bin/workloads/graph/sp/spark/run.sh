@@ -17,18 +17,23 @@
 current_dir=`dirname "$0"`
 current_dir=`cd "$current_dir"; pwd`
 root_dir=${current_dir}/../../../../../
-workload_config=${root_dir}/conf/workloads/graph/tc.conf
+workload_config=${root_dir}/conf/workloads/graph/sp.conf
 . "${root_dir}/bin/functions/load_bench_config.sh"
 
-enter_bench TCPrepare ${workload_config} ${current_dir}
+enter_bench ScalaSparkSP ${workload_config} ${current_dir}
 show_bannar start
 
-rmr_hdfs $INPUT_HDFS || true
+rmr_hdfs $OUTPUT_HDFS || true
+
+SIZE=`dir_size $INPUT_HDFS`
 START_TIME=`timestamp`
+ssh -t ubuntu@$CASSANDRA_IP "cqlsh $CASSANDRA_IP -e \"DROP TABLE IF EXISTS test.sp;\""
+ssh -t ubuntu@$CASSANDRA_IP "cqlsh $CASSANDRA_IP -e \"CREATE KEYSPACE IF NOT EXISTS test WITH REPLICATION = {'class' : 'SimpleStrategy','replication_factor' : 1};\""
+ssh -t ubuntu@$CASSANDRA_IP "cqlsh $CASSANDRA_IP -e \"CREATE TABLE IF NOT EXISTS test.sp (vid bigint, value varchar ,PRIMARY KEY (vid) );\""
 
-run_spark_job com.intel.hibench.sparkbench.graph.GraphDataGenerator $MODEL_INPUT $INPUT_HDFS $EDGES
-
+run_spark_job com.intel.hibench.sparkbench.graph.SP $INPUT_HDFS $NUM_PARTITION
 END_TIME=`timestamp`
 
+gen_report ${START_TIME} ${END_TIME} ${SIZE}
 show_bannar finish
 leave_bench
