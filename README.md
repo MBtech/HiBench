@@ -1,6 +1,7 @@
 # HiBench Suite [![Build Status](https://travis-ci.org/intel-hadoop/HiBench.svg?branch=master)](https://travis-ci.org/intel-hadoop/HiBench)
 ## The bigdata micro benchmark suite ##
 
+This is a modified versoin of HiBench benchmark for Vanir. These are the [default configurations](docs/vanir-confs.md) that are used for the paper. 
 
 * Current version: 7.0
 * Homepage: https://github.com/intel-hadoop/HiBench

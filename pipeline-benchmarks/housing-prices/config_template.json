@@ -1,0 +1,9 @@
+{
+    "fs.s3a.access.key": "",
+    "fs.s3a.secret.key": "",
+    "master": "",
+    "executor.memory": "2g",
+    "driver.memory": "6g",
+    "bucket.name": "house-pricing-data",
+    "records.number": 5000000
+}
