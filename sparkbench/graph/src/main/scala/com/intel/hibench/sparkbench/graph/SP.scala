@@ -43,7 +43,7 @@ object SP {
 
     val gp = g.partitionBy(PartitionStrategy.fromString("RandomVertexCut"), numPartitions)
 
-    val landmarks = gp.edges.takeSample(false, 10).map{ e => e.dstId}
+    val landmarks = gp.edges.takeSample(false, 3).map{ e => e.dstId}
     val spGraph = ShortestPaths.run(gp, landmarks)
         // val ranks = gp.pageRank(0.0001).vertices
 
