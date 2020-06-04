@@ -26,6 +26,16 @@ HiBench is a big data benchmark suite that helps evaluate different big data fra
 
 There are totally 19 workloads in HiBench. The workloads are divided into 6 categories which are micro, ml(machine learning), sql, graph, websearch and streaming.
 
+**Batch pipelines**
+A price predictor (pp) benchmark is part of the workloads used for Vanir. The price predictor benchmark consists of a pipeline of three batch jobs: ETL, Update, ML.
+
+ETL stage gets new data that has been loaded to S3. This data contains records of housing data with prices of the house as well as value for the features of the house. ETL enriches this data with the location features from a static dataset and then stores this enriched data into S3. 
+
+Update loads the historical data and the transformed data from ETL stage in order to merge them into a dataset in S3 that can be processed by ML. 
+
+ML stage loads the housing pricing data from S3, splits the data into test and training set and then trains a random forest model on this data before performance cross valuation for model evaluation. 
+
+The total runtime of the pipeline is the sum of runtimes of each stage. 
   **Micro Benchmarks:**
 
 1. Sort (sort)
